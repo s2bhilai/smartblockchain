@@ -13,11 +13,14 @@ app.use(bodyParser.json());
 
 const blockchain = new Blockchain();
 const transactionQueue = new TransactionQueue();
-const pubsub = new PubSub({ blockchain });
+const pubsub = new PubSub({ blockchain, transactionQueue });
 const account = new Account();
 const transaction = Transaction.createTransaction({ account });
 
-transactionQueue.add(transaction);
+//transactionQueue.add(transaction);
+setTimeout(() => {
+  pubsub.broadcastTransaction(transaction);
+}, 500);
 
 console.log(
   "transactionQueue.getTransactionSeries()",
@@ -32,10 +35,14 @@ app.get("/blockchain", (req, res, next) => {
 
 app.get("/blockchain/mine", (req, res, next) => {
   const lastBlock = blockchain.chain[blockchain.chain.length - 1];
-  const block = Block.mineBlock({ lastBlock, beneficiary: account.address });
+  const block = Block.mineBlock({
+    lastBlock,
+    beneficiary: account.address,
+    transactionSeries: transactionQueue.getTransactionSeries(),
+  });
 
   blockchain
-    .addBlock({ block })
+    .addBlock({ block, transactionQueue })
     .then(() => {
       pubsub.broadcastBlock(block);
       res.json({ block });
@@ -53,7 +60,9 @@ app.post("/account/transact", (req, res, next) => {
     value,
   });
 
-  transactionQueue.add(transaction);
+  //transactionQueue.add(transaction);
+
+  pubsub.broadcastTransaction(transaction);
 
   res.json({ transaction });
 });

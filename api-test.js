@@ -18,6 +18,16 @@ const postTransact = ({ to, value }) => {
   });
 };
 
+const getMine = () => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      request(`${BASE_URL}/blockchain/mine`, (error, response, body) => {
+        return resolve(JSON.parse(body));
+      });
+    }, 1000);
+  });
+};
+
 postTransact({})
   .then((postTransactResponse) => {
     console.log(
@@ -35,6 +45,11 @@ postTransact({})
       "postTransactResponse2 (Standard Transaction) : ",
       postTransactResponse2
     );
+
+    return getMine();
+  })
+  .then((getMineResponse) => {
+    console.log("getMineResponse: ", getMineResponse);
   });
 
 // postTransact({ to: "foo-recipient", value: 20 }).then(

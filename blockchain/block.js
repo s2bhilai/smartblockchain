@@ -6,8 +6,9 @@ const MAX_HASH_VALUE = parseInt("f".repeat(HASH_LENGTH), 16);
 const MAX_NONCE_VALUE = 2 ** 64;
 
 class Block {
-  constructor({ blockHeaders }) {
+  constructor({ blockHeaders, transactionSeries }) {
     this.blockHeaders = blockHeaders;
+    this.transactionSeries = transactionSeries;
   }
 
   static calculateBlockTargetHash({ lastBlock }) {
@@ -35,7 +36,7 @@ class Block {
     return difficulty + 1;
   }
 
-  static mineBlock({ lastBlock, beneficiary }) {
+  static mineBlock({ lastBlock, beneficiary, transactionSeries }) {
     const target = Block.calculateBlockTargetHash({ lastBlock });
     let timestamp, truncatedBlockHeaders, header, nonce, underTargetHash;
 
@@ -47,6 +48,7 @@ class Block {
         difficulty: Block.adjustDifficulty({ lastBlock, timestamp }),
         number: lastBlock.blockHeaders.number + 1,
         timestamp,
+        transactionsRoot: keccakHash(transactionSeries),
       };
 
       header = keccakHash(truncatedBlockHeaders);
@@ -61,6 +63,7 @@ class Block {
     if (underTargetHash < target) {
       return new this({
         blockHeaders: { ...truncatedBlockHeaders, nonce },
+        transactionSeries,
       });
     }
   }
@@ -116,9 +119,9 @@ class Block {
 
 module.exports = Block;
 
-const block = Block.mineBlock({
-  lastBlock: Block.genesis(),
-  beneficiary: "foo",
-});
+// const block = Block.mineBlock({
+//   lastBlock: Block.genesis(),
+//   beneficiary: "foo",
+// });
 
-console.log("block", block);
+// console.log("block", block);
