@@ -1,6 +1,7 @@
 const { GENESIS_DATA, MINE_RATE } = require("../config");
 const Transaction = require("../transaction");
 const { keccakHash } = require("../util");
+const Trie = require("../store/trie");
 
 const HASH_LENGTH = 64;
 const MAX_HASH_VALUE = parseInt("f".repeat(HASH_LENGTH), 16);
@@ -39,6 +40,7 @@ class Block {
 
   static mineBlock({ lastBlock, beneficiary, transactionSeries, stateRoot }) {
     const target = Block.calculateBlockTargetHash({ lastBlock });
+    const transactionsTrie = Trie.buildTrie({ items: transactionSeries });
     let timestamp, truncatedBlockHeaders, header, nonce, underTargetHash;
 
     do {
@@ -49,7 +51,7 @@ class Block {
         difficulty: Block.adjustDifficulty({ lastBlock, timestamp }),
         number: lastBlock.blockHeaders.number + 1,
         timestamp,
-        transactionsRoot: keccakHash(transactionSeries),
+        transactionsRoot: transactionsTrie.rootHash,
         stateRoot,
       };
 
@@ -74,7 +76,7 @@ class Block {
     return new this(GENESIS_DATA);
   }
 
-  static validateBlock({ lastBlock, block }) {
+  static validateBlock({ lastBlock, block, state }) {
     return new Promise((resolve, reject) => {
       if (keccakHash(block) === keccakHash(Block.genesis())) {
         return resolve();
@@ -100,6 +102,21 @@ class Block {
         return reject(new Error("The difficulty must adjust by 1"));
       }
 
+      const rebuiltTransactionsTrie = Trie.buildTrie({
+        items: block.transactionSeries,
+      });
+
+      if (
+        rebuiltTransactionsTrie.rootHash !== block.blockHeaders.transactionsRoot
+      ) {
+        return reject(
+          new Error(
+            `The rebuilt traansactions root does not match the block's` +
+              ` transactions root: ${block.blockHeaders.transactionsRoot}`
+          )
+        );
+      }
+
       const target = Block.calculateBlockTargetHash({ lastBlock });
       const { blockHeaders } = block;
       const { nonce } = blockHeaders;
@@ -113,6 +130,13 @@ class Block {
           new Error("The block does not meet proof of work requirement")
         );
       }
+
+      Transaction.validateTransactionSeries({
+        state,
+        transactionSeries: block.transactionSeries,
+      })
+        .then(() => resolve())
+        .catch((error) => reject(error));
 
       return resolve();
     });

@@ -1,3 +1,4 @@
+const { keccakHash } = require("../util");
 const Trie = require("./trie");
 
 describe("Trie", () => {
@@ -40,6 +41,18 @@ describe("Trie", () => {
       console.log("gottenValue2:", gottenValue2);
 
       expect(gottenValue).toEqual({ one: 1 });
+    });
+  });
+
+  describe("buildTrie()", () => {
+    it("builds a trie where the items are accessible with their hashes", () => {
+      const item1 = { foo: "bar" };
+      const item2 = { foo2: "bar2" };
+
+      trie = Trie.buildTrie({ items: [item1, item2] });
+
+      expect(trie.get({ key: keccakHash(item1) })).toEqual(item1);
+      expect(trie.get({ key: keccakHash(item2) })).toEqual(item2);
     });
   });
 });
