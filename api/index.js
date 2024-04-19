@@ -54,11 +54,12 @@ app.get("/blockchain/mine", (req, res, next) => {
 });
 
 app.post("/account/transact", (req, res, next) => {
-  const { to, value } = req.body;
+  const { to, value, code, gasLimit } = req.body;
 
   //If same account, then transaction done on behalf of current account owner
   const transaction = Transaction.createTransaction({
-    account: !to ? new Account() : account,
+    account: !to ? new Account({ code }) : account,
+    gasLimit,
     to,
     value,
   });
